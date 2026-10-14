@@ -9,6 +9,7 @@ import { stepWorld } from './world/step';
 import { drawTank } from './render/tank';
 import { drawBullets } from './render/bullets';
 import { drawDebug } from './render/debug';
+import { drawEnemy } from './render/enemy';
 
 /** Текущий уровень; null, пока не загружен. Загрузка асинхронна — до её конца показывается экран меню. */
 let world: World | null = null;
@@ -89,6 +90,7 @@ function frame(now: number): void {
     ctx!.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
     drawMapBase(ctx!, world);
     drawTank(ctx!, world.player);
+    for (const e of world.enemies) drawEnemy(ctx!, e);
     drawBullets(ctx!, world);
     drawForestLayer(ctx!, world);
     if (debugGrid) drawDebug(ctx!, world);

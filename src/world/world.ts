@@ -1,5 +1,7 @@
 import { BRICK_FULL, LEVEL_SIZE, TILE_CHARS, isTankPassable, type TileKind } from '../config/tiles';
 import { FIELD_ORIGIN_FP, TILE_FP } from '../config/geometry';
+import { STEP_HZ } from '../config/balance';
+import { Rng } from '../core/rng';
 import type { Level, TilePoint } from '../levels/format';
 import { Tank } from './tank';
 import type { Bullet } from './bullets';
@@ -32,9 +34,16 @@ export class World {
   bullets: Bullet[] = [];
   /** База цела; после разрушения пули пролетают сквозь руины. */
   baseAlive = true;
+  /** Шагов до следующего спавна врага. */
+  spawnTimer: number;
+  /** Индекс следующей точки появления врагов (по кругу). */
+  nextSpawn = 0;
+  /** Детерминированный генератор, общий для ИИ и спавна (PLAN.md, D5). */
+  readonly rng: Rng;
   private pendingEvents: WorldEvent[] = [];
 
-  private constructor(level: Level) {
+  private constructor(level: Level, seed: number) {
+    this.rng = new Rng(seed);
     this.tiles = [];
     let minX = Infinity;
     let minY = Infinity;
@@ -53,6 +62,7 @@ export class World {
     this.enemySpawns = level.enemySpawns.map((p) => ({ ...p }));
     this.enemyQueue = [...level.enemies];
     this.spawnIntervalSec = level.spawnIntervalSec;
+    this.spawnTimer = Math.round(level.spawnIntervalSec * STEP_HZ);
     this.player = new Tank(
       FIELD_ORIGIN_FP + level.player.x * TILE_FP,
       FIELD_ORIGIN_FP + level.player.y * TILE_FP,
@@ -60,9 +70,9 @@ export class World {
     );
   }
 
-  /** Создаёт мир из валидированного уровня. */
-  static fromLevel(level: Level): World {
-    return new World(level);
+  /** Создаёт мир из валидированного уровня. Seed задаёт весь случайный ход игры. */
+  static fromLevel(level: Level, seed = level.number * 7919): World {
+    return new World(level, seed);
   }
 
   tileAt(x: number, y: number): Tile | undefined {

@@ -1,4 +1,5 @@
 import { FIELD_FP, FIELD_ORIGIN_FP, TANK_FP, TILE_FP } from '../config/geometry';
+import type { Tank } from './tank';
 import type { World } from './world';
 
 /**
@@ -19,6 +20,19 @@ export function tankBlocked(world: World, x: number, y: number): boolean {
     for (let tx = tx0; tx <= tx1; tx++) {
       if (!world.isTankPassableAt(tx, ty)) return true;
     }
+  }
+  return false;
+}
+
+/**
+ * Пересекает ли квадрат танка (x, y) другой танк (игрок или враг), кроме `self`.
+ * `self` может быть null — тогда проверяются все танки (нужно при спавне).
+ */
+export function tankOverlapsOther(world: World, self: Tank | null, x: number, y: number): boolean {
+  const others: Tank[] = [world.player, ...world.enemies];
+  for (const o of others) {
+    if (o === self) continue;
+    if (x < o.x + TANK_FP && x + TANK_FP > o.x && y < o.y + TANK_FP && y + TANK_FP > o.y) return true;
   }
   return false;
 }

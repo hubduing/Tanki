@@ -1,6 +1,6 @@
 import { ALIGN_FP, FIELD_ORIGIN_FP, SUB_STEP_FP } from '../config/geometry';
 import { DIR_VEC, isHorizontal, opposite, type Dir } from '../core/dir';
-import { tankBlocked, tankOnIce } from './collision';
+import { tankBlocked, tankOnIce, tankOverlapsOther } from './collision';
 import type { Tank } from './tank';
 import type { World } from './world';
 
@@ -19,7 +19,7 @@ function moveBy(tank: Tank, world: World, ux: number, uy: number, amount: number
     const s = Math.min(remaining, SUB_STEP_FP);
     const nx = tank.x + ux * s;
     const ny = tank.y + uy * s;
-    if (tankBlocked(world, nx, ny)) break;
+    if (tankBlocked(world, nx, ny) || tankOverlapsOther(world, tank, nx, ny)) break;
     tank.x = nx;
     tank.y = ny;
     remaining -= s;

@@ -22,6 +22,8 @@ export class Bullet {
     public readonly owner: Owner,
     /** Пробивает сталь (пуля игрока уровня 3). */
     public readonly pierceSteel: boolean,
+    /** Танк, выпустивший пулю; нужен для лимита «одна пуля на врага». */
+    public readonly source: Tank,
   ) {}
 }
 
@@ -73,7 +75,7 @@ export function spawnBullet(
       y = p.y + mid;
       break;
   }
-  const b = new Bullet(x, y, tank.dir, speedPx, owner, pierceSteel);
+  const b = new Bullet(x, y, tank.dir, speedPx, owner, pierceSteel, tank);
   world.bullets.push(b);
   return b;
 }
@@ -148,11 +150,21 @@ function resolveBullet(world: World, b: Bullet): void {
   // Танки: игрок стреляет во врагов, враги — в игрока.
   if (b.owner === 'player') {
     for (let i = world.enemies.length - 1; i >= 0; i--) {
-      const p = tankPx(world.enemies[i]);
+      const e = world.enemies[i];
+      // Появляющийся враг неуязвим, пуля пролетает мимо.
+      if (e.spawning > 0) continue;
+      const p = tankPx(e);
       if (rectsOverlap(b.x, b.y, SIZE, SIZE, p.x, p.y, TANK_PX, TANK_PX)) {
-        world.enemies.splice(i, 1);
         b.alive = false;
-        world.emit({ type: 'enemyDestroyed', x: p.x + TANK_PX / 2, y: p.y + TANK_PX / 2 });
+        e.health -= 1;
+        const cx = p.x + TANK_PX / 2;
+        const cy = p.y + TANK_PX / 2;
+        if (e.health <= 0) {
+          world.enemies.splice(i, 1);
+          world.emit({ type: 'enemyDestroyed', x: cx, y: cy });
+        } else {
+          world.emit({ type: 'spark', x: b.x, y: b.y });
+        }
         return;
       }
     }

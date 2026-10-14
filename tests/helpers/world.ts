@@ -3,7 +3,7 @@ import { FIELD_ORIGIN, FP, TILE_PX } from '../../src/config/geometry';
 import { World } from '../../src/world/world';
 
 /** Собирает мир из строк сетки (недостающие строки и символы — пустые клетки). */
-export function worldFromRows(rows: string[]): World {
+export function worldFromRows(rows: string[], seed = 1): World {
   const map = Array.from({ length: 13 }, (_, y) => (rows[y] ?? '').padEnd(13, '.'));
   const level: Level = {
     number: 1,
@@ -14,7 +14,7 @@ export function worldFromRows(rows: string[]): World {
     enemySpawns: [{ x: 12, y: 0 }],
     map,
   };
-  return World.fromLevel(level);
+  return World.fromLevel(level, seed);
 }
 
 /** Координата левого края тайла в пикселях экрана. */
