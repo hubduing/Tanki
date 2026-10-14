@@ -2,6 +2,21 @@ import { App } from './core/app';
 import { Input, attachInput } from './input/input';
 import { LOGICAL_HEIGHT, LOGICAL_WIDTH, computeIntegerScale } from './render/scale';
 import { drawScreen } from './render/screens';
+import { drawForestLayer, drawMapBase } from './render/map';
+import { loadLevel } from './levels/loader';
+import { World } from './world/world';
+
+/** Текущий уровень; null, пока не загружен. Загрузка асинхронна — до её конца показывается экран меню. */
+let world: World | null = null;
+loadLevel(`${import.meta.env.BASE_URL}levels/01.json`)
+  .then((level) => {
+    world = World.fromLevel(level);
+  })
+  .catch((err: unknown) => {
+    console.error(err);
+    overlayError = err instanceof Error ? err.message : String(err);
+  });
+let overlayError: string | null = null;
 
 const found = document.getElementById('screen');
 if (!(found instanceof HTMLCanvasElement)) {
@@ -53,7 +68,27 @@ function frame(now: number): void {
   app.tick(now);
 
   // 3. Рендер: всегда, даже на паузе.
-  drawScreen(ctx!, app);
+  const inLevel = app.state === 'playing' || app.state === 'paused';
+  if (inLevel && world) {
+    ctx!.fillStyle = '#000';
+    ctx!.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+    drawMapBase(ctx!, world);
+    drawForestLayer(ctx!, world);
+    if (app.state === 'paused') {
+      ctx!.fillStyle = '#fff';
+      ctx!.font = '12px monospace';
+      ctx!.textAlign = 'center';
+      ctx!.fillText('ПАУЗА', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2);
+      ctx!.textAlign = 'start';
+    }
+  } else {
+    drawScreen(ctx!, app);
+    if (overlayError) {
+      ctx!.fillStyle = '#f55';
+      ctx!.font = '8px monospace';
+      ctx!.fillText(overlayError.slice(0, 40), 8, 210);
+    }
+  }
 
   frames++;
   fpsFrames++;
