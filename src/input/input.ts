@@ -1,3 +1,5 @@
+import type { Dir } from '../core/dir';
+
 /** Команды игрока, не зависящие от клавиш (PLAN.md, M1: ввод → команды). */
 export type Command =
   | 'up'
@@ -45,12 +47,16 @@ export function commandForCode(code: string): Command | undefined {
   return KEY_MAP[code];
 }
 
+const DIRECTIONS: ReadonlySet<Command> = new Set<Command>(['up', 'down', 'left', 'right']);
+
 /**
  * Буфер ввода. Хранит удерживаемые команды и очередь нажатий, которую
  * потребляет логика на каждом кадре.
  */
 export class Input {
   private readonly held = new Set<Command>();
+  /** Порядок нажатия удерживаемых направлений; последнее — текущее. */
+  private dirOrder: Command[] = [];
   private pressed: Command[] = [];
 
   keyDown(code: string): void {
@@ -59,17 +65,30 @@ export class Input {
     if (!this.held.has(cmd) && EDGE_ONLY.has(cmd)) {
       this.pressed.push(cmd);
     }
+    if (DIRECTIONS.has(cmd)) {
+      this.dirOrder = this.dirOrder.filter((c) => c !== cmd);
+      this.dirOrder.push(cmd);
+    }
     this.held.add(cmd);
   }
 
   keyUp(code: string): void {
     const cmd = commandForCode(code);
-    if (cmd) this.held.delete(cmd);
+    if (!cmd) return;
+    this.held.delete(cmd);
+    this.dirOrder = this.dirOrder.filter((c) => c !== cmd);
   }
 
   /** Сброс удерживаемых клавиш при потере фокуса окна. */
   releaseAll(): void {
     this.held.clear();
+    this.dirOrder = [];
+  }
+
+  /** Текущее удерживаемое направление (последнее нажатое) или null. */
+  heldDirection(): Dir | null {
+    const last = this.dirOrder[this.dirOrder.length - 1];
+    return last === undefined ? null : (last as Dir);
   }
 
   isHeld(cmd: Command): boolean {

@@ -5,6 +5,10 @@ import { drawScreen } from './render/screens';
 import { drawForestLayer, drawMapBase } from './render/map';
 import { loadLevel } from './levels/loader';
 import { World } from './world/world';
+import { stepTank } from './world/movement';
+import { PLAYER_SPEED_FP } from './config/balance';
+import { drawTank } from './render/tank';
+import { drawDebug } from './render/debug';
 
 /** Текущий уровень; null, пока не загружен. Загрузка асинхронна — до её конца показывается экран меню. */
 let world: World | null = null;
@@ -55,6 +59,12 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
+// F4: сетка, выравнивание и хитбокс танка (PLAN.md, M3).
+let debugGrid = false;
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'F4') debugGrid = !debugGrid;
+});
+
 let frames = 0;
 let fpsFrames = 0;
 let fpsWindowStart = performance.now();
@@ -65,7 +75,12 @@ function frame(now: number): void {
   for (const cmd of input.takePressed()) app.handle(cmd);
 
   // 2. Логика: фиксированные шаги, только в состоянии «playing».
-  app.tick(now);
+  const steps = app.tick(now);
+  if (world && steps > 0) {
+    for (let i = 0; i < steps; i++) {
+      stepTank(world.player, world, input.heldDirection(), PLAYER_SPEED_FP);
+    }
+  }
 
   // 3. Рендер: всегда, даже на паузе.
   const inLevel = app.state === 'playing' || app.state === 'paused';
@@ -73,7 +88,9 @@ function frame(now: number): void {
     ctx!.fillStyle = '#000';
     ctx!.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
     drawMapBase(ctx!, world);
+    drawTank(ctx!, world.player);
     drawForestLayer(ctx!, world);
+    if (debugGrid) drawDebug(ctx!, world);
     if (app.state === 'paused') {
       ctx!.fillStyle = '#fff';
       ctx!.font = '12px monospace';

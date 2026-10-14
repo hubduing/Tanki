@@ -1,5 +1,7 @@
 import { BRICK_FULL, LEVEL_SIZE, TILE_CHARS, isTankPassable, type TileKind } from '../config/tiles';
+import { FIELD_ORIGIN_FP, TILE_FP } from '../config/geometry';
 import type { Level, TilePoint } from '../levels/format';
+import { Tank } from './tank';
 
 export interface Tile {
   kind: TileKind;
@@ -20,6 +22,8 @@ export class World {
   readonly enemySpawns: TilePoint[];
   readonly enemyQueue: string[];
   readonly spawnIntervalSec: number;
+  /** Танк игрока; позиция в fixed-point, см. config/geometry. */
+  readonly player: Tank;
 
   private constructor(level: Level) {
     this.tiles = [];
@@ -40,6 +44,11 @@ export class World {
     this.enemySpawns = level.enemySpawns.map((p) => ({ ...p }));
     this.enemyQueue = [...level.enemies];
     this.spawnIntervalSec = level.spawnIntervalSec;
+    this.player = new Tank(
+      FIELD_ORIGIN_FP + level.player.x * TILE_FP,
+      FIELD_ORIGIN_FP + level.player.y * TILE_FP,
+      'up',
+    );
   }
 
   /** Создаёт мир из валидированного уровня. */
