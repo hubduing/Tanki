@@ -13,7 +13,8 @@ import { drawEnemy } from './render/enemy';
 import { drawHud } from './render/hud';
 import { drawBonuses } from './render/bonus';
 import { loadSave, writeSave } from './core/save';
-import { levelFileFor, nextLevelNumber } from './core/levels';
+import { LEVEL_FILES, levelFileFor, nextLevelNumber } from './core/levels';
+import { clampMenuLevel, stepMenuLevel } from './core/menu';
 import { Audio } from './audio/audio';
 
 const audio = new Audio();
@@ -55,10 +56,8 @@ loadLevelNumber(currentLevel);
 let menuLevel = currentLevel;
 
 /** Сдвигает выбор уровня в меню в пределах открытых уровней. */
-function stepMenuLevel(delta: number): void {
-  const unlocked = loadSave().unlockedLevel;
-  const next = menuLevel + delta;
-  if (next >= 1 && next <= unlocked && levelFileFor(next)) menuLevel = next;
+function moveMenuLevel(delta: number): void {
+  menuLevel = stepMenuLevel(menuLevel, delta, loadSave().unlockedLevel, LEVEL_FILES.length);
 }
 
 /** Переключает звук и сохраняет настройку. */
@@ -138,7 +137,7 @@ function frame(now: number): void {
       continue;
     }
     if (before === 'menu' && (cmd === 'up' || cmd === 'down')) {
-      stepMenuLevel(cmd === 'up' ? -1 : 1);
+      moveMenuLevel(cmd === 'up' ? -1 : 1);
       continue;
     }
     app.handle(cmd);
@@ -147,8 +146,10 @@ function frame(now: number): void {
       loadLevelNumber(menuLevel);
     } else if (before === 'levelComplete' && app.state === 'playing') {
       loadLevelNumber(nextLevelNumber(currentLevel) ?? currentLevel);
-    } else if (before === 'gameOver' && app.state === 'menu') {
-      menuLevel = currentLevel;
+    } else if ((before === 'gameOver' || before === 'paused') && app.state === 'menu') {
+      // Выход в меню: незавершённая попытка не засчитывается, мир сбрасывается.
+      world = null;
+      menuLevel = clampMenuLevel(currentLevel, loadSave().unlockedLevel, LEVEL_FILES.length);
     }
   }
 
