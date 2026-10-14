@@ -10,6 +10,14 @@ import { validateLevel } from '../../src/levels/validate';
 const dir = join(process.cwd(), 'public', 'levels');
 const files = readdirSync(dir).filter((f) => f.endsWith('.json'));
 
+import { LEVEL_FILES } from '../../src/core/levels';
+import { expect as expectSet, it as itSet } from 'vitest';
+
+// Последовательность в коде совпадает с файлами: уровень без строки в LEVEL_FILES не дойдёт до игрока.
+itSet('LEVEL_FILES совпадает с файлами public/levels', () => {
+  expectSet([...LEVEL_FILES].sort()).toEqual([...files].sort());
+});
+
 describe('встроенные уровни', () => {
   it('есть хотя бы один уровень', () => {
     expect(files.length).toBeGreaterThan(0);
