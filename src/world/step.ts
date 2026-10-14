@@ -6,6 +6,7 @@ import {
 } from '../config/balance';
 import type { Dir } from '../core/dir';
 import { RESPAWN_INVULN_STEPS } from '../config/rules';
+import { stepBonuses } from './bonus';
 import { FIELD_ORIGIN_FP, TILE_FP } from '../config/geometry';
 import { stepEnemyAI } from './ai';
 import { spawnBullet, updateBullets, type Owner } from './bullets';
@@ -53,13 +54,19 @@ export function stepWorld(world: World, intent: PlayerIntent): void {
 
   if (world.outcome !== 'playing') return;
 
-  // 2. Таймеры: перезарядка, анимация появления, неуязвимость, возрождение.
+  // 2. Таймеры: перезарядка, анимация появления, неуязвимость, заморозка, лопата, возрождение.
   if (p.cooldown > 0) p.cooldown--;
   if (p.invuln > 0) p.invuln--;
+  if (world.freezeTimer > 0) world.freezeTimer--;
+  if (world.shovelTimer > 0) {
+    world.shovelTimer--;
+    if (world.shovelTimer === 0) world.applyShovel(false);
+  }
   for (const e of world.enemies) {
     if (e.cooldown > 0) e.cooldown--;
     if (e.spawning > 0) e.spawning--;
   }
+  stepBonuses(world);
   if (world.playerDown) {
     world.respawnTimer--;
     if (world.respawnTimer <= 0) respawnPlayer(world);
@@ -72,7 +79,10 @@ export function stepWorld(world: World, intent: PlayerIntent): void {
   if (!world.playerDown) {
     stepTank(p, world, intent.dir, PLAYER_SPEED_FP);
   }
-  for (const e of world.enemies) stepEnemyAI(world, e);
+  // Заморозка: враги не двигаются и не стреляют, пока действует таймер.
+  if (world.freezeTimer === 0) {
+    for (const e of world.enemies) stepEnemyAI(world, e);
+  }
 
   // Выстрел игрока.
   if (intent.fire && !world.playerDown) {

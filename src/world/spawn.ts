@@ -6,6 +6,7 @@ import {
   isEnemyKind,
 } from '../config/enemies';
 import { STEP_HZ } from '../config/balance';
+import { BONUS_EVERY } from '../config/bonuses';
 import { tankBlocked, tankOverlapsOther } from './collision';
 import { Tank } from './tank';
 import type { World } from './world';
@@ -33,6 +34,9 @@ export function stepSpawn(world: World): void {
     const code = world.enemyQueue.shift()!;
     if (!isEnemyKind(code)) continue; // валидатор не пропускает такие коды, защита на всякий случай
     const tank = new Tank(x, y, 'down', code, ENEMY_TYPES[code].health);
+    // Каждый четвёртый враг несёт бонус (детерминированно через счётчик, см. BONUS_EVERY).
+    world.spawnedCount++;
+    tank.carriesBonus = world.spawnedCount % BONUS_EVERY === 0;
     tank.spawning = SPAWN_ANIM_STEPS;
     tank.turnTimer = world.rng.int(60, 180);
     world.enemies.push(tank);

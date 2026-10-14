@@ -1,5 +1,6 @@
 import { BULLET_PX } from '../config/balance';
 import { FIELD_ORIGIN, FP, TANK_PX, TILE_PX } from '../config/geometry';
+import { rollBonusCode, spawnBonus } from './bonus';
 import { LEVEL_SIZE } from '../config/tiles';
 import { DIR_VEC, type Dir } from '../core/dir';
 import type { Tank } from './tank';
@@ -162,6 +163,10 @@ function resolveBullet(world: World, b: Bullet): void {
         if (e.health <= 0) {
           world.enemies.splice(i, 1);
           world.onEnemyKilled(e.kind, cx, cy);
+          if (e.carriesBonus) {
+            // Бонус появляется в клетке, где стоял враг (левый верхний угол в fixed-point).
+            spawnBonus(world, rollBonusCode(world), e.x, e.y);
+          }
         } else {
           world.emit({ type: 'spark', x: b.x, y: b.y });
         }

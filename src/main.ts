@@ -11,6 +11,7 @@ import { drawBullets } from './render/bullets';
 import { drawDebug } from './render/debug';
 import { drawEnemy } from './render/enemy';
 import { drawHud } from './render/hud';
+import { drawBonuses } from './render/bonus';
 import { Audio } from './audio/audio';
 
 const audio = new Audio();
@@ -121,6 +122,7 @@ function frame(now: number): void {
     drawMapBase(ctx!, world);
     drawTank(ctx!, world.player);
     for (const e of world.enemies) drawEnemy(ctx!, e);
+    drawBonuses(ctx!, world);
     drawBullets(ctx!, world);
     drawForestLayer(ctx!, world);
     drawHud(ctx!, world, 240);

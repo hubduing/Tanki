@@ -3,6 +3,7 @@ import { FIELD_ORIGIN_FP, TILE_FP } from '../config/geometry';
 import { STEP_HZ } from '../config/balance';
 import { RESPAWN_DELAY_STEPS, START_LIVES } from '../config/rules';
 import { ENEMY_TYPES, type EnemyCode } from '../config/enemies';
+import type { Bonus } from './bonus';
 import { Rng } from '../core/rng';
 import type { Level, TilePoint } from '../levels/format';
 import { Tank } from './tank';
@@ -52,6 +53,14 @@ export class World {
   killed = 0;
   /** Итог уровня; меняется один раз. */
   outcome: LevelOutcome = 'playing';
+  /** Бонусы на карте. */
+  bonuses: Bonus[] = [];
+  /** Сколько врагов уже появилось; нужно для выбора «помеченных» врагов с бонусом. */
+  spawnedCount = 0;
+  /** Шагов заморозки врагов (бонус «таймер»); 0 — не заморожены. */
+  freezeTimer = 0;
+  /** Шагов стальной базы (бонус «лопата»); 0 — обычная кирпичная. */
+  shovelTimer = 0;
   /** Игрок погиб и ждёт возрождения. */
   playerDown = false;
   /** Шагов до возрождения, пока playerDown. */
@@ -114,6 +123,49 @@ export class World {
     this.pendingEvents = [];
     return out;
   }
+
+  /**
+   * Лопата: вокруг базы на время стальные тайлы, после истечения — кирпич.
+   * Тайлы 2×2 вокруг базы меняются на сталь и обратно; состояние проверяется в шаге.
+   */
+  setBaseSteel(steps: number): void {
+    this.shovelTimer = steps;
+    this.applyShovel(true);
+  }
+
+  /** Заменяет тайлы вокруг базы на сталь или кирпич. Вызывается при старте и окончании лопаты. */
+  applyShovel(steel: boolean): void {
+    const ring: Array<[number, number]> = [];
+    for (let x = this.base.x - 1; x <= this.base.x + 2; x++) {
+      for (let y = this.base.y - 1; y <= this.base.y + 2; y++) {
+        const inside = x >= this.base.x && x <= this.base.x + 1 && y >= this.base.y && y <= this.base.y + 1;
+        if (!inside) ring.push([x, y]);
+      }
+    }
+    if (steel) {
+      for (const [x, y] of ring) {
+        const t = this.tileAt(x, y);
+        if (!t || t.kind !== 'brick') continue;
+        t.kind = 'steel';
+        t.brickMask = 0;
+        this.shovelRing.add(`${x},${y}`);
+      }
+    } else {
+      // Возвращаем кирпич только тем тайлам, которые лопата сама сделала стальными.
+      for (const key of this.shovelRing) {
+        const [x, y] = key.split(',').map(Number);
+        const t = this.tileAt(x, y);
+        if (t && t.kind === 'steel') {
+          t.kind = 'brick';
+          t.brickMask = 0b1111;
+        }
+      }
+      this.shovelRing.clear();
+    }
+  }
+
+  /** Тайлы, которые лопата превратила в сталь; при окончании возвращаем кирпич только им. */
+  private shovelRing = new Set<string>();
 
   /** Разрушает базу: состояние меняется один раз, событие — тоже. Итог — поражение. */
   destroyBase(): void {

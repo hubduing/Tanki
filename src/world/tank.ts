@@ -32,6 +32,8 @@ export class Tank {
   turnTimer = 0;
   /** Упёрся ли враг на прошлом шаге (тогда меняет направление). */
   blockedLast = false;
+  /** Несёт ли враг бонус, который выпадет при его уничтожении. */
+  carriesBonus = false;
 
   constructor(
     x: number,
