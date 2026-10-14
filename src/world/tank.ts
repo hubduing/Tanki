@@ -12,6 +12,10 @@ export class Tank {
   moving = false;
   /** Направление, на которое игрок хочет повернуть, пока танк выравнивается. */
   pendingTurn: Dir | null = null;
+  /** Шагов до следующего выстрела (перезарядка). */
+  cooldown = 0;
+  /** Уровень улучшения 0..3 (для игрока). */
+  upgrade = 0;
 
   constructor(x: number, y: number, dir: Dir) {
     this.x = x;

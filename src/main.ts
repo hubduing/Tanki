@@ -5,9 +5,9 @@ import { drawScreen } from './render/screens';
 import { drawForestLayer, drawMapBase } from './render/map';
 import { loadLevel } from './levels/loader';
 import { World } from './world/world';
-import { stepTank } from './world/movement';
-import { PLAYER_SPEED_FP } from './config/balance';
+import { stepWorld } from './world/step';
 import { drawTank } from './render/tank';
+import { drawBullets } from './render/bullets';
 import { drawDebug } from './render/debug';
 
 /** Текущий уровень; null, пока не загружен. Загрузка асинхронна — до её конца показывается экран меню. */
@@ -78,7 +78,7 @@ function frame(now: number): void {
   const steps = app.tick(now);
   if (world && steps > 0) {
     for (let i = 0; i < steps; i++) {
-      stepTank(world.player, world, input.heldDirection(), PLAYER_SPEED_FP);
+      stepWorld(world, { dir: input.heldDirection(), fire: input.isHeld('fire') });
     }
   }
 
@@ -89,6 +89,7 @@ function frame(now: number): void {
     ctx!.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
     drawMapBase(ctx!, world);
     drawTank(ctx!, world.player);
+    drawBullets(ctx!, world);
     drawForestLayer(ctx!, world);
     if (debugGrid) drawDebug(ctx!, world);
     if (app.state === 'paused') {

@@ -2,6 +2,8 @@ import { BRICK_FULL, LEVEL_SIZE, TILE_CHARS, isTankPassable, type TileKind } fro
 import { FIELD_ORIGIN_FP, TILE_FP } from '../config/geometry';
 import type { Level, TilePoint } from '../levels/format';
 import { Tank } from './tank';
+import type { Bullet } from './bullets';
+import type { WorldEvent } from './events';
 
 export interface Tile {
   kind: TileKind;
@@ -24,6 +26,13 @@ export class World {
   readonly spawnIntervalSec: number;
   /** Танк игрока; позиция в fixed-point, см. config/geometry. */
   readonly player: Tank;
+  /** Танки врагов. Спавн появится на M5; пока список заполняют тесты. */
+  enemies: Tank[] = [];
+  /** Пули всех владельцев. */
+  bullets: Bullet[] = [];
+  /** База цела; после разрушения пули пролетают сквозь руины. */
+  baseAlive = true;
+  private pendingEvents: WorldEvent[] = [];
 
   private constructor(level: Level) {
     this.tiles = [];
@@ -65,5 +74,24 @@ export class World {
   isTankPassableAt(x: number, y: number): boolean {
     const t = this.tileAt(x, y);
     return t !== undefined && isTankPassable(t.kind);
+  }
+
+  /** Записывает событие для звука и эффектов. */
+  emit(e: WorldEvent): void {
+    this.pendingEvents.push(e);
+  }
+
+  /** Забирает накопленные события и очищает очередь. */
+  drainEvents(): WorldEvent[] {
+    const out = this.pendingEvents;
+    this.pendingEvents = [];
+    return out;
+  }
+
+  /** Разрушает базу: состояние меняется один раз, событие — тоже. */
+  destroyBase(): void {
+    if (!this.baseAlive) return;
+    this.baseAlive = false;
+    this.emit({ type: 'baseDestroyed', x: this.base.x * 16 + 16, y: this.base.y * 16 + 16 });
   }
 }
