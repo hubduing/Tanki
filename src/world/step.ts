@@ -5,6 +5,8 @@ import {
   playerBulletSpeedPx,
 } from '../config/balance';
 import type { Dir } from '../core/dir';
+import { RESPAWN_INVULN_STEPS } from '../config/rules';
+import { FIELD_ORIGIN_FP, TILE_FP } from '../config/geometry';
 import { stepEnemyAI } from './ai';
 import { spawnBullet, updateBullets, type Owner } from './bullets';
 import { stepTank } from './movement';
@@ -49,22 +51,31 @@ export function tryFire(
 export function stepWorld(world: World, intent: PlayerIntent): void {
   const p = world.player;
 
-  // 2. Таймеры: перезарядка, анимация появления.
+  if (world.outcome !== 'playing') return;
+
+  // 2. Таймеры: перезарядка, анимация появления, неуязвимость, возрождение.
   if (p.cooldown > 0) p.cooldown--;
+  if (p.invuln > 0) p.invuln--;
   for (const e of world.enemies) {
     if (e.cooldown > 0) e.cooldown--;
     if (e.spawning > 0) e.spawning--;
+  }
+  if (world.playerDown) {
+    world.respawnTimer--;
+    if (world.respawnTimer <= 0) respawnPlayer(world);
   }
 
   // 3. Спавн врагов из очереди.
   stepSpawn(world);
 
-  // 1 и 4. Движение игрока и ИИ врагов.
-  stepTank(p, world, intent.dir, PLAYER_SPEED_FP);
+  // 1 и 4. Движение игрока (только если жив) и ИИ врагов.
+  if (!world.playerDown) {
+    stepTank(p, world, intent.dir, PLAYER_SPEED_FP);
+  }
   for (const e of world.enemies) stepEnemyAI(world, e);
 
   // Выстрел игрока.
-  if (intent.fire) {
+  if (intent.fire && !world.playerDown) {
     const speed = playerBulletSpeedPx(p.upgrade);
     const pierce = p.upgrade >= 3;
     tryFire(world, p, 'player', speed, pierce, playerBulletLimit(p.upgrade));
@@ -72,4 +83,19 @@ export function stepWorld(world: World, intent: PlayerIntent): void {
 
   // 5. Пули и попадания.
   updateBullets(world);
+
+  // 8. Условия завершения.
+  world.checkVictory();
+}
+
+/** Возрождение игрока на точке старта с неуязвимостью. Без жизней не вызывается. */
+function respawnPlayer(world: World): void {
+  const p = world.player;
+  p.x = FIELD_ORIGIN_FP + world.playerSpawn.x * TILE_FP;
+  p.y = FIELD_ORIGIN_FP + world.playerSpawn.y * TILE_FP;
+  p.dir = 'up';
+  p.pendingTurn = null;
+  p.cooldown = 0;
+  p.invuln = RESPAWN_INVULN_STEPS;
+  world.playerDown = false;
 }

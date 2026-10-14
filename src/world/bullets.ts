@@ -161,7 +161,7 @@ function resolveBullet(world: World, b: Bullet): void {
         const cy = p.y + TANK_PX / 2;
         if (e.health <= 0) {
           world.enemies.splice(i, 1);
-          world.emit({ type: 'enemyDestroyed', x: cx, y: cy });
+          world.onEnemyKilled(e.kind, cx, cy);
         } else {
           world.emit({ type: 'spark', x: b.x, y: b.y });
         }
@@ -172,7 +172,10 @@ function resolveBullet(world: World, b: Bullet): void {
     const p = tankPx(world.player);
     if (rectsOverlap(b.x, b.y, SIZE, SIZE, p.x, p.y, TANK_PX, TANK_PX)) {
       b.alive = false;
-      world.emit({ type: 'playerHit', x: p.x + TANK_PX / 2, y: p.y + TANK_PX / 2 });
+      // Неуязвимый игрок (после возрождения) пулю поглощает без урона.
+      if (world.player.invuln === 0) {
+        world.onPlayerHit(p.x + TANK_PX / 2, p.y + TANK_PX / 2);
+      }
     }
   }
 }

@@ -10,17 +10,33 @@ import { drawTank } from './render/tank';
 import { drawBullets } from './render/bullets';
 import { drawDebug } from './render/debug';
 import { drawEnemy } from './render/enemy';
+import { drawHud } from './render/hud';
+import { Audio } from './audio/audio';
+
+const audio = new Audio();
+// Браузер разрешает звук только после жеста пользователя: разблокируем на первом нажатии.
+window.addEventListener('keydown', () => audio.unlock(), { once: true });
+window.addEventListener('pointerdown', () => audio.unlock(), { once: true });
 
 /** Текущий уровень; null, пока не загружен. Загрузка асинхронна — до её конца показывается экран меню. */
 let world: World | null = null;
-loadLevel(`${import.meta.env.BASE_URL}levels/01.json`)
-  .then((level) => {
-    world = World.fromLevel(level);
-  })
-  .catch((err: unknown) => {
-    console.error(err);
-    overlayError = err instanceof Error ? err.message : String(err);
-  });
+/** Уровни пока один (01.json); список и порядок появятся на M8. */
+const LEVEL_URL = `${import.meta.env.BASE_URL}levels/01.json`;
+
+/** Загружает уровень заново и создаёт свежий мир. Ошибку показывает оверлеем. */
+function reloadLevel(): void {
+  // Сразу убираем старый мир: иначе его итог снова переведёт игру в экран итогов.
+  world = null;
+  loadLevel(LEVEL_URL)
+    .then((level) => {
+      world = World.fromLevel(level);
+    })
+    .catch((err: unknown) => {
+      console.error(err);
+      overlayError = err instanceof Error ? err.message : String(err);
+    });
+}
+reloadLevel();
 let overlayError: string | null = null;
 
 const found = document.getElementById('screen');
@@ -73,15 +89,29 @@ let fps = 0;
 
 function frame(now: number): void {
   // 1. Команды: ввод превращается в переходы состояний.
-  for (const cmd of input.takePressed()) app.handle(cmd);
+  for (const cmd of input.takePressed()) {
+    const before = app.state;
+    app.handle(cmd);
+    // Старт нового мира: из итогов «далее» или «в меню → играть» — свежий уровень.
+    if (before !== 'playing' && app.state === 'playing' && world && world.outcome !== 'playing') {
+      reloadLevel();
+    }
+  }
 
   // 2. Логика: фиксированные шаги, только в состоянии «playing».
   const steps = app.tick(now);
   if (world && steps > 0) {
     for (let i = 0; i < steps; i++) {
       stepWorld(world, { dir: input.heldDirection(), fire: input.isHeld('fire') });
+      // Итог мира переводит приложение в экран итогов или «игра окончена».
+      if (world.outcome !== 'playing') {
+        app.machine.go(world.outcome === 'won' ? 'levelComplete' : 'gameOver');
+        break;
+      }
     }
   }
+  // События мира уходят звуку; без разблокированного аудио они просто отбрасываются.
+  if (world) audio.play(world.drainEvents());
 
   // 3. Рендер: всегда, даже на паузе.
   const inLevel = app.state === 'playing' || app.state === 'paused';
@@ -93,6 +123,7 @@ function frame(now: number): void {
     for (const e of world.enemies) drawEnemy(ctx!, e);
     drawBullets(ctx!, world);
     drawForestLayer(ctx!, world);
+    drawHud(ctx!, world, 240);
     if (debugGrid) drawDebug(ctx!, world);
     if (app.state === 'paused') {
       ctx!.fillStyle = '#fff';
@@ -102,7 +133,7 @@ function frame(now: number): void {
       ctx!.textAlign = 'start';
     }
   } else {
-    drawScreen(ctx!, app);
+    drawScreen(ctx!, app, world ? { score: world.score, killed: world.killed, levelNumber: world.levelNumber } : undefined);
     if (overlayError) {
       ctx!.fillStyle = '#f55';
       ctx!.font = '8px monospace';

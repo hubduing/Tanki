@@ -23,7 +23,17 @@ const HINTS: Record<App['state'], string> = {
  * Рисует текущий экран. Не меняет состояние приложения (PLAN.md, раздел 3.2).
  * Заглушки: настоящая карта появится на M2.
  */
-export function drawScreen(ctx: CanvasRenderingContext2D, app: App): void {
+export interface ResultStats {
+  score: number;
+  killed: number;
+  levelNumber: number;
+}
+
+/**
+ * Рисует текущий экран. Не меняет состояние приложения (PLAN.md, раздел 3.2).
+ * На экранах итогов выводит очки и число уничтоженных врагов из переданной статистики.
+ */
+export function drawScreen(ctx: CanvasRenderingContext2D, app: App, stats?: ResultStats): void {
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
 
@@ -41,6 +51,13 @@ export function drawScreen(ctx: CanvasRenderingContext2D, app: App): void {
   if (state === 'playing' || state === 'paused') {
     ctx.fillStyle = '#888';
     ctx.fillText(`шаги: ${app.logicSteps}`, LOGICAL_WIDTH / 2, 140);
+  }
+
+  if ((state === 'levelComplete' || state === 'gameOver') && stats) {
+    ctx.fillStyle = '#fff';
+    ctx.fillText(`уровень ${stats.levelNumber}`, LOGICAL_WIDTH / 2, 150);
+    ctx.fillText(`очки: ${stats.score}`, LOGICAL_WIDTH / 2, 164);
+    ctx.fillText(`врагов: ${stats.killed}`, LOGICAL_WIDTH / 2, 178);
   }
   ctx.textAlign = 'start';
 }
