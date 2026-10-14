@@ -12,23 +12,34 @@ import { drawDebug } from './render/debug';
 import { drawEnemy } from './render/enemy';
 import { drawHud } from './render/hud';
 import { drawBonuses } from './render/bonus';
+import { loadSave, writeSave } from './core/save';
+import { levelFileFor, nextLevelNumber } from './core/levels';
 import { Audio } from './audio/audio';
 
 const audio = new Audio();
+// Настройка звука из сохранения (PLAN.md, M8). Переключатель — клавиша M в меню.
+audio.setEnabled(loadSave().soundOn);
 // Браузер разрешает звук только после жеста пользователя: разблокируем на первом нажатии.
 window.addEventListener('keydown', () => audio.unlock(), { once: true });
 window.addEventListener('pointerdown', () => audio.unlock(), { once: true });
 
 /** Текущий уровень; null, пока не загружен. Загрузка асинхронна — до её конца показывается экран меню. */
 let world: World | null = null;
-/** Уровни пока один (01.json); список и порядок появятся на M8. */
-const LEVEL_URL = `${import.meta.env.BASE_URL}levels/01.json`;
+/** Номер текущего уровня (1-based) из последовательности в core/levels.ts. */
+let currentLevel = loadSave().unlockedLevel;
+let overlayError: string | null = null;
 
-/** Загружает уровень заново и создаёт свежий мир. Ошибку показывает оверлеем. */
-function reloadLevel(): void {
+/** Загружает уровень по номеру и создаёт свежий мир. Ошибку показывает оверлеем. */
+function loadLevelNumber(n: number): void {
+  const file = levelFileFor(n);
+  if (!file) {
+    overlayError = `уровень ${n} не найден`;
+    return;
+  }
+  currentLevel = n;
   // Сразу убираем старый мир: иначе его итог снова переведёт игру в экран итогов.
   world = null;
-  loadLevel(LEVEL_URL)
+  loadLevel(`${import.meta.env.BASE_URL}levels/${file}`)
     .then((level) => {
       world = World.fromLevel(level);
     })
@@ -37,8 +48,18 @@ function reloadLevel(): void {
       overlayError = err instanceof Error ? err.message : String(err);
     });
 }
-reloadLevel();
-let overlayError: string | null = null;
+loadLevelNumber(currentLevel);
+
+/** Итог уровня: рекорд сохраняется, прогресс двигается к следующему уровню. */
+function recordOutcome(w: World): void {
+  const save = loadSave();
+  save.highScore = Math.max(save.highScore, w.score);
+  if (w.outcome === 'won') {
+    const next = nextLevelNumber(currentLevel);
+    save.unlockedLevel = Math.max(save.unlockedLevel, next ?? currentLevel);
+  }
+  writeSave(save);
+}
 
 const found = document.getElementById('screen');
 if (!(found instanceof HTMLCanvasElement)) {
@@ -93,9 +114,12 @@ function frame(now: number): void {
   for (const cmd of input.takePressed()) {
     const before = app.state;
     app.handle(cmd);
-    // Старт нового мира: из итогов «далее» или «в меню → играть» — свежий уровень.
-    if (before !== 'playing' && app.state === 'playing' && world && world.outcome !== 'playing') {
-      reloadLevel();
+    // Старт нового мира: из итогов «далее» (уровень пройден) или «рестарт» (игра окончена).
+    if (before === 'levelComplete' && app.state === 'playing') {
+      const next = nextLevelNumber(currentLevel);
+      loadLevelNumber(next ?? currentLevel);
+    } else if (before === 'menu' && app.state === 'playing') {
+      loadLevelNumber(currentLevel);
     }
   }
 
@@ -106,6 +130,7 @@ function frame(now: number): void {
       stepWorld(world, { dir: input.heldDirection(), fire: input.isHeld('fire') });
       // Итог мира переводит приложение в экран итогов или «игра окончена».
       if (world.outcome !== 'playing') {
+        recordOutcome(world);
         app.machine.go(world.outcome === 'won' ? 'levelComplete' : 'gameOver');
         break;
       }
