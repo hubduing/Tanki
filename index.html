@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Танчики</title>
+    <style>
+      html, body {
+        margin: 0;
+        height: 100%;
+        background: #000;
+        overflow: hidden;
+      }
+      #app {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      canvas {
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+      }
+      #fps {
+        position: fixed;
+        top: 4px;
+        left: 6px;
+        color: #0f0;
+        font: 12px monospace;
+        background: rgba(0, 0, 0, 0.5);
+        padding: 2px 4px;
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="screen" width="256" height="224"></canvas>
+    </div>
+    <div id="fps"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
