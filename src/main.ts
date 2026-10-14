@@ -1,4 +1,7 @@
+import { App } from './core/app';
+import { Input, attachInput } from './input/input';
 import { LOGICAL_HEIGHT, LOGICAL_WIDTH, computeIntegerScale } from './render/scale';
+import { drawScreen } from './render/screens';
 
 const found = document.getElementById('screen');
 if (!(found instanceof HTMLCanvasElement)) {
@@ -22,34 +25,46 @@ function applyScale(): void {
 window.addEventListener('resize', applyScale);
 applyScale();
 
-// Отладочный счётчик кадров (включается клавишей F3 — см. M1 оверлей).
-const fpsEl = document.getElementById('fps') as HTMLDivElement;
-let fpsFrames = 0;
-let fpsWindowStart = performance.now();
-let debugVisible = false;
+const app = new App();
+const input = new Input();
+attachInput(input, window);
+app.finishLoading();
 
+// Отладочный оверлей (F3): состояние, шаги, кадры и FPS.
+const overlay = document.getElementById('fps') as HTMLDivElement;
+let debugVisible = false;
 window.addEventListener('keydown', (e) => {
   if (e.code === 'F3') {
     debugVisible = !debugVisible;
-    fpsEl.style.display = debugVisible ? 'block' : 'none';
+    overlay.style.display = debugVisible ? 'block' : 'none';
   }
 });
 
-function frame(now: number): void {
-  // Временный кадр M0: чёрный экран с надписью, пока не реализован цикл (M1).
-  ctx!.fillStyle = '#000';
-  ctx!.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
-  ctx!.fillStyle = '#fff';
-  ctx!.font = '8px monospace';
-  ctx!.fillText('TANCHIKI M0', 92, 112);
+let frames = 0;
+let fpsFrames = 0;
+let fpsWindowStart = performance.now();
+let fps = 0;
 
+function frame(now: number): void {
+  // 1. Команды: ввод превращается в переходы состояний.
+  for (const cmd of input.takePressed()) app.handle(cmd);
+
+  // 2. Логика: фиксированные шаги, только в состоянии «playing».
+  app.tick(now);
+
+  // 3. Рендер: всегда, даже на паузе.
+  drawScreen(ctx!, app);
+
+  frames++;
   fpsFrames++;
   if (now - fpsWindowStart >= 1000) {
-    if (debugVisible) {
-      fpsEl.textContent = `FPS: ${fpsFrames}`;
-    }
+    fps = fpsFrames;
     fpsFrames = 0;
     fpsWindowStart = now;
+  }
+  if (debugVisible) {
+    overlay.textContent =
+      `состояние: ${app.state}\nшаги: ${app.logicSteps}\nкадры: ${frames}\nFPS: ${fps}`;
   }
   requestAnimationFrame(frame);
 }
