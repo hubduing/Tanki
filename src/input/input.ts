@@ -10,6 +10,7 @@ export type Command =
   | 'pause'
   | 'confirm'
   | 'menu'
+  | 'sound'
   | 'debugWin'
   | 'debugLose';
 
@@ -29,6 +30,7 @@ export const KEY_MAP: Readonly<Record<string, Command>> = {
   KeyP: 'pause',
   Enter: 'confirm',
   KeyM: 'menu',
+  KeyN: 'sound',
   // Отладочные переходы; в релизе будут убраны.
   F6: 'debugWin',
   F7: 'debugLose',
@@ -39,6 +41,7 @@ const EDGE_ONLY: ReadonlySet<Command> = new Set<Command>([
   'pause',
   'confirm',
   'menu',
+  'sound',
   'debugWin',
   'debugLose',
 ]);

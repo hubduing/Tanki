@@ -37,6 +37,7 @@ function loadLevelNumber(n: number): void {
     return;
   }
   currentLevel = n;
+  menuLevel = n;
   // Сразу убираем старый мир: иначе его итог снова переведёт игру в экран итогов.
   world = null;
   loadLevel(`${import.meta.env.BASE_URL}levels/${file}`)
@@ -49,6 +50,24 @@ function loadLevelNumber(n: number): void {
     });
 }
 loadLevelNumber(currentLevel);
+
+/** Уровень, выбранный в меню стрелками; не выше открытого в сохранении. */
+let menuLevel = currentLevel;
+
+/** Сдвигает выбор уровня в меню в пределах открытых уровней. */
+function stepMenuLevel(delta: number): void {
+  const unlocked = loadSave().unlockedLevel;
+  const next = menuLevel + delta;
+  if (next >= 1 && next <= unlocked && levelFileFor(next)) menuLevel = next;
+}
+
+/** Переключает звук и сохраняет настройку. */
+function toggleSound(): void {
+  const save = loadSave();
+  save.soundOn = !save.soundOn;
+  writeSave(save);
+  audio.setEnabled(save.soundOn);
+}
 
 /** Итог уровня: рекорд сохраняется, прогресс двигается к следующему уровню. */
 function recordOutcome(w: World): void {
@@ -113,13 +132,23 @@ function frame(now: number): void {
   // 1. Команды: ввод превращается в переходы состояний.
   for (const cmd of input.takePressed()) {
     const before = app.state;
+    // Настройки и выбор уровня в меню не меняют состояние машины.
+    if (cmd === 'sound') {
+      toggleSound();
+      continue;
+    }
+    if (before === 'menu' && (cmd === 'up' || cmd === 'down')) {
+      stepMenuLevel(cmd === 'up' ? -1 : 1);
+      continue;
+    }
     app.handle(cmd);
-    // Старт нового мира: из итогов «далее» (уровень пройден) или «рестарт» (игра окончена).
-    if (before === 'levelComplete' && app.state === 'playing') {
-      const next = nextLevelNumber(currentLevel);
-      loadLevelNumber(next ?? currentLevel);
-    } else if (before === 'menu' && app.state === 'playing') {
-      loadLevelNumber(currentLevel);
+    // Старт нового мира: из меню — выбранный уровень, из итогов — следующий или текущий.
+    if (before === 'menu' && app.state === 'playing') {
+      loadLevelNumber(menuLevel);
+    } else if (before === 'levelComplete' && app.state === 'playing') {
+      loadLevelNumber(nextLevelNumber(currentLevel) ?? currentLevel);
+    } else if (before === 'gameOver' && app.state === 'menu') {
+      menuLevel = currentLevel;
     }
   }
 
@@ -160,7 +189,12 @@ function frame(now: number): void {
       ctx!.textAlign = 'start';
     }
   } else {
-    drawScreen(ctx!, app, world ? { score: world.score, killed: world.killed, levelNumber: world.levelNumber } : undefined);
+    drawScreen(
+      ctx!,
+      app,
+      world ? { score: world.score, killed: world.killed, levelNumber: world.levelNumber } : undefined,
+      { menuLevel, soundOn: loadSave().soundOn },
+    );
     if (overlayError) {
       ctx!.fillStyle = '#f55';
       ctx!.font = '8px monospace';

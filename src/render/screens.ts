@@ -33,7 +33,18 @@ export interface ResultStats {
  * Рисует текущий экран. Не меняет состояние приложения (PLAN.md, раздел 3.2).
  * На экранах итогов выводит очки и число уничтоженных врагов из переданной статистики.
  */
-export function drawScreen(ctx: CanvasRenderingContext2D, app: App, stats?: ResultStats): void {
+/** Состояние меню: выбранный уровень и звук (PLAN.md, M8). */
+export interface MenuInfo {
+  menuLevel: number;
+  soundOn: boolean;
+}
+
+export function drawScreen(
+  ctx: CanvasRenderingContext2D,
+  app: App,
+  stats?: ResultStats,
+  menu?: MenuInfo,
+): void {
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
 
@@ -51,6 +62,12 @@ export function drawScreen(ctx: CanvasRenderingContext2D, app: App, stats?: Resu
   if (state === 'playing' || state === 'paused') {
     ctx.fillStyle = '#888';
     ctx.fillText(`шаги: ${app.logicSteps}`, LOGICAL_WIDTH / 2, 140);
+  }
+
+  if (state === 'menu' && menu) {
+    ctx.fillStyle = '#fff';
+    ctx.fillText(`уровень ${menu.menuLevel}  (стрелки ↑↓)`, LOGICAL_WIDTH / 2, 150);
+    ctx.fillText(`звук: ${menu.soundOn ? 'вкл' : 'выкл'}  (N)`, LOGICAL_WIDTH / 2, 164);
   }
 
   if ((state === 'levelComplete' || state === 'gameOver') && stats) {
