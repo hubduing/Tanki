@@ -10,9 +10,7 @@ export type Command =
   | 'pause'
   | 'confirm'
   | 'menu'
-  | 'sound'
-  | 'debugWin'
-  | 'debugLose';
+  | 'sound';
 
 /** Карта клавиш по `KeyboardEvent.code`: стрелки и WASD. */
 export const KEY_MAP: Readonly<Record<string, Command>> = {
@@ -31,9 +29,6 @@ export const KEY_MAP: Readonly<Record<string, Command>> = {
   Enter: 'confirm',
   KeyM: 'menu',
   KeyN: 'sound',
-  // Отладочные переходы; в релизе будут убраны.
-  F6: 'debugWin',
-  F7: 'debugLose',
 };
 
 /** Команды, которые срабатывают по нажатию, а не удерживаются. */
@@ -42,8 +37,6 @@ const EDGE_ONLY: ReadonlySet<Command> = new Set<Command>([
   'confirm',
   'menu',
   'sound',
-  'debugWin',
-  'debugLose',
 ]);
 
 export function commandForCode(code: string): Command | undefined {

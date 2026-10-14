@@ -1,17 +1,19 @@
 import { App } from './core/app';
 import { Input, attachInput } from './input/input';
 import { LOGICAL_HEIGHT, LOGICAL_WIDTH, computeIntegerScale } from './render/scale';
-import { drawScreen } from './render/screens';
+import { drawControlsHint, drawPauseOverlay, drawScreen } from './render/screens';
 import { drawForestLayer, drawMapBase } from './render/map';
 import { loadLevel } from './levels/loader';
 import { World } from './world/world';
 import { stepWorld } from './world/step';
+import { spawnEffects } from './world/effects';
 import { drawTank } from './render/tank';
 import { drawBullets } from './render/bullets';
 import { drawDebug } from './render/debug';
 import { drawEnemy } from './render/enemy';
 import { drawHud } from './render/hud';
 import { drawBonuses } from './render/bonus';
+import { drawEffects } from './render/effects';
 import { loadSave, writeSave } from './core/save';
 import { LEVEL_FILES, levelFileFor, nextLevelNumber } from './core/levels';
 import { clampMenuLevel, stepMenuLevel } from './core/menu';
@@ -29,6 +31,11 @@ let world: World | null = null;
 /** Номер текущего уровня (1-based) из последовательности в core/levels.ts. */
 let currentLevel = loadSave().unlockedLevel;
 let overlayError: string | null = null;
+/** Логические шаги текущего уровня (60 в секунду, только в состоянии игры) — для подсказки управления. */
+let levelSteps = 0;
+const STEPS_PER_SECOND = 60;
+/** Уровень, выбранный в меню стрелками; не выше открытого в сохранении. Объявлен до первой загрузки. */
+let menuLevel = currentLevel;
 
 /** Загружает уровень по номеру и создаёт свежий мир. Ошибку показывает оверлеем. */
 function loadLevelNumber(n: number): void {
@@ -41,6 +48,7 @@ function loadLevelNumber(n: number): void {
   menuLevel = n;
   // Сразу убираем старый мир: иначе его итог снова переведёт игру в экран итогов.
   world = null;
+  levelSteps = 0;
   loadLevel(`${import.meta.env.BASE_URL}levels/${file}`)
     .then((level) => {
       world = World.fromLevel(level);
@@ -51,9 +59,6 @@ function loadLevelNumber(n: number): void {
     });
 }
 loadLevelNumber(currentLevel);
-
-/** Уровень, выбранный в меню стрелками; не выше открытого в сохранении. */
-let menuLevel = currentLevel;
 
 /** Сдвигает выбор уровня в меню в пределах открытых уровней. */
 function moveMenuLevel(delta: number): void {
@@ -126,6 +131,8 @@ let frames = 0;
 let fpsFrames = 0;
 let fpsWindowStart = performance.now();
 let fps = 0;
+/** Предыдущее состояние машины: для запуска/остановки музыки на переходах. */
+let prevState: string | null = null;
 
 function frame(now: number): void {
   // 1. Команды: ввод превращается в переходы состояний.
@@ -153,11 +160,19 @@ function frame(now: number): void {
     }
   }
 
+  // Музыка: запускается при входе в игру, останавливается при выходе.
+  if (app.state !== prevState) {
+    if (app.state === 'playing') audio.playMusic();
+    else audio.stopMusic();
+    prevState = app.state;
+  }
+
   // 2. Логика: фиксированные шаги, только в состоянии «playing».
   const steps = app.tick(now);
   if (world && steps > 0) {
     for (let i = 0; i < steps; i++) {
       stepWorld(world, { dir: input.heldDirection(), fire: input.isHeld('fire') });
+      levelSteps++;
       // Итог мира переводит приложение в экран итогов или «игра окончена».
       if (world.outcome !== 'playing') {
         recordOutcome(world);
@@ -166,8 +181,12 @@ function frame(now: number): void {
       }
     }
   }
-  // События мира уходят звуку; без разблокированного аудио они просто отбрасываются.
-  if (world) audio.play(world.drainEvents());
+  // События кадра: звук (если контекст разблокирован) и визуальные эффекты.
+  if (world) {
+    const events = world.drainEvents();
+    audio.play(events);
+    spawnEffects(world, events);
+  }
 
   // 3. Рендер: всегда, даже на паузе.
   const inLevel = app.state === 'playing' || app.state === 'paused';
@@ -179,16 +198,12 @@ function frame(now: number): void {
     for (const e of world.enemies) drawEnemy(ctx!, e);
     drawBonuses(ctx!, world);
     drawBullets(ctx!, world);
+    drawEffects(ctx!, world);
     drawForestLayer(ctx!, world);
     drawHud(ctx!, world, 240);
     if (debugGrid) drawDebug(ctx!, world);
-    if (app.state === 'paused') {
-      ctx!.fillStyle = '#fff';
-      ctx!.font = '12px monospace';
-      ctx!.textAlign = 'center';
-      ctx!.fillText('ПАУЗА', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2);
-      ctx!.textAlign = 'start';
-    }
+    if (app.state === 'playing') drawControlsHint(ctx!, levelSteps / STEPS_PER_SECOND);
+    if (app.state === 'paused') drawPauseOverlay(ctx!);
   } else {
     drawScreen(
       ctx!,

@@ -1,10 +1,9 @@
-import { BULLET_PX } from '../config/balance';
 import type { World } from '../world/world';
+import { drawBulletSprite } from './sprites';
 
-/** Пули: игрока — белые, врага — красные. Спрайты и эффекты взрывов — M9. */
+/** Пули: белые — игрока, оранжевые — врага. */
 export function drawBullets(ctx: CanvasRenderingContext2D, world: World): void {
   for (const b of world.bullets) {
-    ctx.fillStyle = b.owner === 'player' ? '#fff' : '#f66';
-    ctx.fillRect(b.x, b.y, BULLET_PX, BULLET_PX);
+    drawBulletSprite(ctx, b.x, b.y, b.owner);
   }
 }

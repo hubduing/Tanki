@@ -8,6 +8,7 @@ import { Rng } from '../core/rng';
 import type { Level, TilePoint } from '../levels/format';
 import { Tank } from './tank';
 import type { Bullet } from './bullets';
+import type { Effect } from './effects';
 import type { WorldEvent } from './events';
 
 export interface Tile {
@@ -55,6 +56,8 @@ export class World {
   outcome: LevelOutcome = 'playing';
   /** Бонусы на карте. */
   bonuses: Bonus[] = [];
+  /** Визуальные эффекты (взрывы, искры) — создаются из событий, живут по таймеру. */
+  effects: Effect[] = [];
   /** Сколько врагов уже появилось; нужно для выбора «помеченных» врагов с бонусом. */
   spawnedCount = 0;
   /** Шагов заморозки врагов (бонус «таймер»); 0 — не заморожены. */
@@ -65,6 +68,7 @@ export class World {
   playerDown = false;
   /** Шагов до возрождения, пока playerDown. */
   respawnTimer = 0;
+  /** События текущего кадра для звука; наполняются из pendingEvents при создании эффектов. */
   private pendingEvents: WorldEvent[] = [];
 
   private constructor(level: Level, seed: number) {
@@ -117,7 +121,10 @@ export class World {
     this.pendingEvents.push(e);
   }
 
-  /** Забирает накопленные события и очищает очередь. */
+  /**
+   * Забирает накопленные события кадра для звука и визуальных эффектов
+   * (PLAN.md, 3.4 шаг 9) и очищает буфер.
+   */
   drainEvents(): WorldEvent[] {
     const out = this.pendingEvents;
     this.pendingEvents = [];
@@ -200,7 +207,7 @@ export class World {
     const points = ENEMY_TYPES[code as EnemyCode]?.points ?? 0;
     this.score += points;
     this.killed++;
-    this.emit({ type: 'enemyDestroyed', x: cx, y: cy });
+    this.emit({ type: 'enemyDestroyed', x: cx, y: cy, code });
     this.checkVictory();
   }
 

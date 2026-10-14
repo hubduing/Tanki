@@ -6,5 +6,5 @@ export type WorldEvent =
   | { type: 'spark'; x: number; y: number }
   | { type: 'explosion'; x: number; y: number; size: 'small' | 'large' }
   | { type: 'playerHit'; x: number; y: number }
-  | { type: 'enemyDestroyed'; x: number; y: number }
+  | { type: 'enemyDestroyed'; x: number; y: number; code: string }
   | { type: 'baseDestroyed'; x: number; y: number };

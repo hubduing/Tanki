@@ -17,7 +17,7 @@ export const ALLOWED: Record<AppState, readonly AppState[]> = {
 /** Какая команда в каком состоянии вызывает переход. */
 export const BINDINGS: Partial<Record<AppState, Partial<Record<Command, AppState>>>> = {
   menu: { confirm: 'playing' },
-  playing: { pause: 'paused', debugWin: 'levelComplete', debugLose: 'gameOver' },
+  playing: { pause: 'paused' },
   paused: { pause: 'playing', confirm: 'playing', menu: 'menu' },
   levelComplete: { confirm: 'playing' },
   gameOver: { confirm: 'menu' },

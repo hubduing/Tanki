@@ -54,11 +54,12 @@ describe('App: переходы', () => {
 
   it('итоги уровня и конец игры', () => {
     const app = startedApp();
-    app.handle('debugWin');
+    // Итог мира переводит машину напрямую (см. main.ts); команд ввода для этого нет.
+    app.machine.go('levelComplete');
     expect(app.state).toBe('levelComplete');
     app.handle('confirm');
     expect(app.state).toBe('playing');
-    app.handle('debugLose');
+    app.machine.go('gameOver');
     expect(app.state).toBe('gameOver');
     app.handle('confirm');
     expect(app.state).toBe('menu');

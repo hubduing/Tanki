@@ -9,6 +9,7 @@ import { RESPAWN_INVULN_STEPS } from '../config/rules';
 import { stepBonuses } from './bonus';
 import { FIELD_ORIGIN_FP, TILE_FP } from '../config/geometry';
 import { stepEnemyAI } from './ai';
+import { stepEffects } from './effects';
 import { spawnBullet, updateBullets, type Owner } from './bullets';
 import { stepTank } from './movement';
 import { stepSpawn } from './spawn';
@@ -96,6 +97,10 @@ export function stepWorld(world: World, intent: PlayerIntent): void {
 
   // 8. Условия завершения.
   world.checkVictory();
+
+  // 9. Визуальные эффекты по таймеру (взрывы и искры; создаются в main.ts из
+  // событий кадра, чтобы не дренировать их внутри шага).
+  stepEffects(world);
 }
 
 /** Возрождение игрока на точке старта с неуязвимостью. Без жизней не вызывается. */
