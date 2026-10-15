@@ -20,14 +20,14 @@ export const TILE_FP = TILE_PX * FP;
 export const FIELD_FP = LEVEL_SIZE * TILE_FP;
 
 /**
- * Танк 12×12 внутри тайла 16 px: по 2 px запаса с каждой стороны, поэтому танк
+ * Танк 14×14 внутри тайла 16 px: по 1 px запаса с каждой стороны, поэтому танк
  * входит в проход шириной в один тайл и поворачивает, не требуя точной подводки.
  */
-export const TANK_PX = 12;
+export const TANK_PX = 14;
 export const TANK_FP = TANK_PX * FP;
 
 /** Шаг выравнивания для поворота: поперечная координата кратна 8 px от начала поля. */
-export const ALIGN_PX = 8;
+export const ALIGN_PX = 10;
 export const ALIGN_FP = ALIGN_PX * FP;
 
 /** Перевод fixed-point в пиксели для отрисовки (округление до целого). */
