@@ -82,7 +82,7 @@ function simulate(w: World, mode: 'idle' | 'bot', maxSteps: number): Run {
 }
 
 describe('Баланс: прогон всех уровней (PLAN.md, M9)', () => {
-  it('таблица прогонов: 12 уровней, бот и «игрок стоит»', () => {
+  it('таблица прогонов: 35 уровней, бот и «игрок стоит»', () => {
     const rows: string[] = [];
     for (const file of files) {
       const idle = simulate(loadLevel(file), 'idle', 20_000);
@@ -94,7 +94,7 @@ describe('Баланс: прогон всех уровней (PLAN.md, M9)', () 
       );
     }
     console.log('\n' + rows.join('\n') + '\n');
-    expect(files.length).toBe(12);
+    expect(files.length).toBe(35);
   });
 
   it('в каждом уровне лимит врагов на поле соблюдается', () => {

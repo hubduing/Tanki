@@ -1,7 +1,7 @@
 {
   "number": 3,
   "palette": 2,
-  "spawnIntervalSec": 1.86,
+  "spawnIntervalSec": 1.92,
   "enemies": [
     "B",
     "B",
@@ -12,17 +12,17 @@
     "B",
     "B",
     "B",
-    "F",
+    "B",
+    "B",
+    "B",
+    "B",
+    "B",
+    "B",
+    "B",
     "F",
     "F",
     "P",
-    "P",
-    "A",
-    "A",
-    "A",
-    "A",
-    "A",
-    "A"
+    "P"
   ],
   "player": {
     "x": 4,

@@ -102,7 +102,7 @@ function play(file: string, maxSteps: number, seed?: number): Result {
 }
 
 describe('Проходимость уровней (PLAN.md, M9)', () => {
-  it('отчёт: бот-защитник по всем 12 уровням', () => {
+  it('отчёт: бот-защитник по всем 35 уровням', () => {
     const rows: string[] = [];
     let wins = 0;
     for (const file of files) {
@@ -114,6 +114,6 @@ describe('Проходимость уровней (PLAN.md, M9)', () => {
       );
     }
     console.log('\n' + rows.join('\n') + `\nпобед: ${wins}/${files.length}\n`);
-    expect(files.length).toBe(12);
+    expect(files.length).toBe(35);
   });
 });
