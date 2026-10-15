@@ -33,6 +33,8 @@ export const KEY_MAP: Readonly<Record<string, Command>> = {
 
 /** Команды, которые срабатывают по нажатию, а не удерживаются. */
 const EDGE_ONLY: ReadonlySet<Command> = new Set<Command>([
+  'up',
+  'down',
   'pause',
   'confirm',
   'menu',

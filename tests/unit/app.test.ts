@@ -127,4 +127,22 @@ describe('Input', () => {
     input.releaseAll();
     expect(input.isHeld('up')).toBe(false);
   });
+
+  it('up/down попадают в очередь нажатий для меню', () => {
+    const input = new Input();
+    input.keyDown('ArrowUp');
+    expect(input.takePressed()).toEqual(['up']);
+    input.keyDown('ArrowDown');
+    expect(input.takePressed()).toEqual(['down']);
+  });
+
+  it('удержание up/down не дублирует нажатие', () => {
+    const input = new Input();
+    input.keyDown('ArrowUp');
+    input.keyDown('ArrowUp');
+    expect(input.takePressed()).toEqual(['up']);
+    input.keyUp('ArrowUp');
+    input.keyDown('ArrowUp');
+    expect(input.takePressed()).toEqual(['up']);
+  });
 });
