@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PLAYER_SPEED_FP, PLAYER_SPEED_PX_S, STEP_HZ } from '../../src/config/balance';
-import { FP, TANK_PX } from '../../src/config/geometry';
+import { ALIGN_PX, FIELD_ORIGIN, FP, TANK_PX } from '../../src/config/geometry';
 import type { Dir } from '../../src/core/dir';
 import { Input } from '../../src/input/input';
 import { stepTank } from '../../src/world/movement';
@@ -79,15 +79,21 @@ describe('прямое движение', () => {
   });
 });
 
+/** Линия выравнивания поворота: поперечная координата кратна ALIGN_PX от начала поля. */
+function alignLine(k: number): number {
+  return FIELD_ORIGIN + k * ALIGN_PX;
+}
+
 describe('поворот', () => {
   it('поворот ждёт выравнивания, сдвигая танк поперёк, и не меняет направление сразу', () => {
     const w = worldFromRows([]);
-    placeTank(w, tilePx(2), tilePx(2) + 3); // смещение 3 px от линии сетки
+    // Танк на линии 2 по Y (x = 18 px), смещён на 3 px вниз от неё.
+    placeTank(w, tilePx(2), alignLine(2) + 3);
     w.player.dir = 'right';
-    // Три шага выравнивания по 1 px.
+    // Три шага выравнивания по 1 px: танк возвращается на линию, направление не меняется.
     run(w, 'up', 3);
     expect(w.player.dir).toBe('right');
-    expect(tankPx(w).y).toBe(tilePx(2));
+    expect(tankPx(w).y).toBe(alignLine(2));
     // Следующий шаг — поворот.
     run(w, 'up', 1);
     expect(w.player.dir).toBe('up');
@@ -99,18 +105,20 @@ describe('поворот', () => {
       '.............',
       '#############',
     ]);
-    // Тайл-коридор: строка 1. Танк в её левом верхнем углу, поперечная координата выровнена.
-    placeTank(w, tilePx(3), tilePx(1));
+    // Тайл-коридор: строка 1 (y 24..40). Линия выравнивания внутри неё — 28 px (k = 2).
+    placeTank(w, tilePx(3), alignLine(2));
     w.player.dir = 'right';
     stepTank(w.player, w, 'up', PLAYER_SPEED_FP);
     expect(w.player.dir).toBe('up');
-    // Стена сверху: танк не выходит из коридора.
-    expect(tankPx(w).y).toBe(tilePx(1));
+    // Стена сверху: танк на линии 28 px не может сдвинуться в строку 0 (кирпич),
+    // поэтому остаётся на месте и не выходит из коридора.
+    run(w, 'up', 20);
+    expect(tankPx(w).y).toBe(alignLine(2));
   });
 
   it('отпускание клавиши отменяет ожидающий поворот', () => {
     const w = worldFromRows([]);
-    placeTank(w, tilePx(2), tilePx(2) + 3);
+    placeTank(w, tilePx(2), alignLine(2) + 3);
     w.player.dir = 'right';
     stepTank(w.player, w, 'up', PLAYER_SPEED_FP);
     expect(w.player.pendingTurn).toBe('up');
@@ -124,6 +132,7 @@ describe('лёд', () => {
     // Лёд в тайлах 4..7, сталь в тайле 8.
     const w = worldFromRows(['....====@....']);
     placeTank(w, tilePx(4), tilePx(0));
+    w.player.dir = 'right';
     run(w, 'right', 3);
     run(w, null, 200);
     expect(tankPx(w).x).toBe(tilePx(8) - TANK_PX);
@@ -132,6 +141,7 @@ describe('лёд', () => {
   it('на обычном полу танк останавливается сразу после отпускания', () => {
     const w = worldFromRows([]);
     placeTank(w, tilePx(4), tilePx(0));
+    w.player.dir = 'right';
     run(w, 'right', 3);
     run(w, null, 50);
     expect(tankPx(w).x).toBe(tilePx(4) + 3);

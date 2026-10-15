@@ -224,7 +224,7 @@ describe('Сценарные симуляции (PLAN.md, 6.3)', () => {
     expect(w.shovelTimer).toBe(BONUS.shovelSteps);
     // Кольцо вокруг базы стало стальным.
     expect(w.tileAt(5, 11)?.kind).toBe('steel');
-    expect(w.tileAt(8, 12)?.kind).toBe('steel');
+    expect(w.tileAt(7, 10)?.kind).toBe('steel');
 
     // Заморозка держит врагов на месте.
     for (let i = 0; i < 120; i++) stepWorld(w, IDLE);
@@ -238,7 +238,7 @@ describe('Сценарные симуляции (PLAN.md, 6.3)', () => {
     expect(w.shovelTimer).toBe(0);
     expect(w.player.invuln).toBe(0);
     expect(w.tileAt(5, 11)?.kind, 'лопата обязана вернуть кирпич').toBe('brick');
-    expect(w.tileAt(8, 12)?.kind, 'лопата обязана вернуть кирпич').toBe('brick');
+    expect(w.tileAt(7, 10)?.kind, 'лопата обязана вернуть кирпич').toBe('brick');
     expect(w.outcome).toBe('playing');
   });
 

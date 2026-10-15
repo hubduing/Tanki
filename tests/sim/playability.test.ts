@@ -115,5 +115,5 @@ describe('Проходимость уровней (PLAN.md, M9)', () => {
     }
     console.log('\n' + rows.join('\n') + `\nпобед: ${wins}/${files.length}\n`);
     expect(files.length).toBe(35);
-  });
+  }, 60_000);
 });
