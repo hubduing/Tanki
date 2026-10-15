@@ -1,7 +1,7 @@
 import { BRICK_FULL, LEVEL_SIZE, TILE_CHARS, isTankPassable, type TileKind } from '../config/tiles';
 import { FIELD_ORIGIN_FP, TILE_FP } from '../config/geometry';
 import { STEP_HZ } from '../config/balance';
-import { RESPAWN_DELAY_STEPS, START_LIVES } from '../config/rules';
+import { ALLY_SPAWNS_PER_LEVEL, RESPAWN_DELAY_STEPS, START_LIVES } from '../config/rules';
 import { ENEMY_TYPES, type EnemyCode } from '../config/enemies';
 import type { Bonus } from './bonus';
 import { Rng } from '../core/rng';
@@ -24,7 +24,7 @@ export interface Tile {
 export class World {
   readonly size = LEVEL_SIZE;
   readonly tiles: Tile[];
-  /** Левый верхний тайл базы 2×2. */
+  /** Таблица базы (один тайл). */
   readonly base: TilePoint;
   readonly playerSpawn: TilePoint;
   readonly enemySpawns: TilePoint[];
@@ -68,6 +68,12 @@ export class World {
   playerDown = false;
   /** Шагов до возрождения, пока playerDown. */
   respawnTimer = 0;
+  /** Напарник-ИИ; null, пока не появился или когда погиб без оставшихся появлений. */
+  ally: Tank | null = null;
+  /** Сколько раз ещё можно выпустить напарника на этом уровне (до ALLY_SPAWNS_PER_LEVEL). */
+  allySpawnsLeft = ALLY_SPAWNS_PER_LEVEL;
+  /** Шагов до появления напарника после гибели; 0 — не ждёт. */
+  allyRespawnTimer = 0;
   /** События текущего кадра для звука; наполняются из pendingEvents при создании эффектов. */
   private pendingEvents: WorldEvent[] = [];
 
@@ -75,19 +81,24 @@ export class World {
     this.rng = new Rng(seed);
     this.levelNumber = level.number;
     this.tiles = [];
-    let minX = Infinity;
-    let minY = Infinity;
+    let baseX = -1;
+    let baseY = -1;
     for (let y = 0; y < LEVEL_SIZE; y++) {
       for (let x = 0; x < LEVEL_SIZE; x++) {
         const kind = TILE_CHARS[level.map[y][x]];
         this.tiles.push({ kind, brickMask: BRICK_FULL });
         if (kind === 'base') {
-          minX = Math.min(minX, x);
-          minY = Math.min(minY, y);
+          if (baseX === -1 && baseY === -1) {
+            baseX = x;
+            baseY = y;
+          } else {
+            // More than one base tile should be caught by validation.
+            // We'll just keep the first one.
+          }
         }
       }
     }
-    this.base = { x: minX, y: minY };
+    this.base = { x: baseX, y: baseY };
     this.playerSpawn = { ...level.player };
     this.enemySpawns = level.enemySpawns.map((p) => ({ ...p }));
     this.enemyQueue = [...level.enemies];
@@ -143,9 +154,9 @@ export class World {
   /** Заменяет тайлы вокруг базы на сталь или кирпич. Вызывается при старте и окончании лопаты. */
   applyShovel(steel: boolean): void {
     const ring: Array<[number, number]> = [];
-    for (let x = this.base.x - 1; x <= this.base.x + 2; x++) {
-      for (let y = this.base.y - 1; y <= this.base.y + 2; y++) {
-        const inside = x >= this.base.x && x <= this.base.x + 1 && y >= this.base.y && y <= this.base.y + 1;
+    for (let x = this.base.x - 1; x <= this.base.x + 1; x++) {
+      for (let y = this.base.y - 1; y <= this.base.y + 1; y++) {
+        const inside = x === this.base.x && y === this.base.y;
         if (!inside) ring.push([x, y]);
       }
     }
@@ -174,13 +185,13 @@ export class World {
   /** Тайлы, которые лопата превратила в сталь; при окончании возвращаем кирпич только им. */
   private shovelRing = new Set<string>();
 
-  /** Разрушает базу: состояние меняется один раз, событие — тоже. Итог — поражение. */
-  destroyBase(): void {
-    if (!this.baseAlive) return;
-    this.baseAlive = false;
-    this.emit({ type: 'baseDestroyed', x: this.base.x * 16 + 16, y: this.base.y * 16 + 16 });
-    this.finish('lost');
-  }
+   /** Разрушает базу: состояние меняется один раз, событие — тоже. Итог — поражение. */
+   destroyBase(): void {
+     if (!this.baseAlive) return;
+     this.baseAlive = false;
+     this.emit({ type: 'baseDestroyed', x: this.base.x * 16 + 8, y: this.base.y * 16 + 8 });
+     this.finish('lost');
+   }
 
   /**
    * Попадание во взрослого игрока (не неуязвимого): теряется жизнь и улучшение.

@@ -195,6 +195,7 @@ function frame(now: number): void {
     ctx!.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
     drawMapBase(ctx!, world);
     drawTank(ctx!, world.player);
+    if (world.ally) drawTank(ctx!, world.ally);
     for (const e of world.enemies) drawEnemy(ctx!, e);
     drawBonuses(ctx!, world);
     drawBullets(ctx!, world);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PLAYER_SPEED_FP, PLAYER_SPEED_PX_S, STEP_HZ } from '../../src/config/balance';
-import { FP } from '../../src/config/geometry';
+import { FP, TANK_PX } from '../../src/config/geometry';
 import type { Dir } from '../../src/core/dir';
 import { Input } from '../../src/input/input';
 import { stepTank } from '../../src/world/movement';
@@ -49,7 +49,7 @@ describe('прямое движение', () => {
     const w = worldFromRows([rowWith('#')]);
     placeTank(w, tilePx(0), tilePx(0));
     run(w, 'right', 200);
-    expect(tankPx(w).x).toBe(tilePx(4) - 16);
+    expect(tankPx(w).x).toBe(tilePx(4) - TANK_PX);
   });
 
   it.each([
@@ -60,14 +60,14 @@ describe('прямое движение', () => {
     const w = worldFromRows([rowWith(ch)]);
     placeTank(w, tilePx(0), tilePx(0));
     run(w, 'right', 200);
-    expect(tankPx(w).x).toBe(tilePx(4) - 16);
+    expect(tankPx(w).x).toBe(tilePx(4) - TANK_PX);
   });
 
   it('лес проходим', () => {
     const w = worldFromRows([rowWith('*')]);
     placeTank(w, tilePx(0), tilePx(0));
     run(w, 'right', 200);
-    expect(tankPx(w).x).toBe(tilePx(12));
+    expect(tankPx(w).x).toBe(tilePx(13) - TANK_PX);
   });
 
   it('разворот на 180° не требует выравнивания', () => {
@@ -126,7 +126,7 @@ describe('лёд', () => {
     placeTank(w, tilePx(4), tilePx(0));
     run(w, 'right', 3);
     run(w, null, 200);
-    expect(tankPx(w).x).toBe(tilePx(8) - 16);
+    expect(tankPx(w).x).toBe(tilePx(8) - TANK_PX);
   });
 
   it('на обычном полу танк останавливается сразу после отпускания', () => {

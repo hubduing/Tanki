@@ -22,6 +22,8 @@ export function drawHud(ctx: CanvasRenderingContext2D, world: World, x0: number)
     ctx.fillRect(x0 + 2 + col * 6, 8 + row * 6, 4, 4);
   }
 
+  // Появления напарника, сколько осталось на уровне (сбрасываются каждым уровнем).
+  ctx.fillText(`A${world.allySpawnsLeft}`, x0 + HUD_WIDTH / 2, 184);
   // Жизни внизу панели, значок — маленький танк.
   ctx.fillText(String(world.lives), x0 + HUD_WIDTH / 2, 200);
   ctx.fillText(String(world.levelNumber), x0 + HUD_WIDTH / 2, 216);

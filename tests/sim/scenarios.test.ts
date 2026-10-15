@@ -192,8 +192,10 @@ describe('Сценарные симуляции (PLAN.md, 6.3)', () => {
     const wallTop = tilePx(5);
     let tunneled = false;
     let steps = 0;
+    // Один выстрел: после попадания перезарядка не даёт второму выстрелу пролететь раньше времени.
+    stepWorld(far, FIRE);
     while (steps < 60 && far.tileAt(6, 5)?.kind === 'brick') {
-      stepWorld(far, FIRE);
+      stepWorld(far, { dir: null, fire: false });
       steps++;
       if (far.bullets.some((b) => b.y + BULLET_PX <= wallTop)) tunneled = true;
     }
@@ -203,6 +205,8 @@ describe('Сценарные симуляции (PLAN.md, 6.3)', () => {
 
   it('«Наложение бонусов»: заморозка, щит и стальная база корректно завершаются', () => {
     const w = worldFromRows(brickBaseField(), 61);
+    // Напарник появляется в начале уровня и мог бы убить врага раньше проверок этого теста.
+    w.allySpawnsLeft = 0;
     w.lives = 99;
     w.enemyQueue.length = 0;
     placeTank(w, tilePx(0), tilePx(0));
@@ -281,7 +285,8 @@ describe('Сценарные симуляции (PLAN.md, 6.3)', () => {
         `врагов на поле ${w.enemies.length} > ${MAX_ENEMIES_ON_FIELD}`,
         i,
       );
-      const playerBullets = w.bullets.filter((b) => b.owner === 'player').length;
+      // Лимит относится к танку игрока; пули напарника считаются отдельно.
+      const playerBullets = w.bullets.filter((b) => b.source === w.player).length;
       note(
         playerBullets <= playerBulletLimit(w.player.upgrade),
         `пуль игрока ${playerBullets} > лимита ${playerBulletLimit(w.player.upgrade)}`,

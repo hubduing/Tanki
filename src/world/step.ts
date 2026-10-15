@@ -9,6 +9,7 @@ import { RESPAWN_INVULN_STEPS } from '../config/rules';
 import { stepBonuses } from './bonus';
 import { FIELD_ORIGIN_FP, TILE_FP } from '../config/geometry';
 import { stepEnemyAI } from './ai';
+import { stepAlly } from './ally';
 import { stepEffects } from './effects';
 import { spawnBullet, updateBullets, type Owner } from './bullets';
 import { stepTank } from './movement';
@@ -75,6 +76,9 @@ export function stepWorld(world: World, intent: PlayerIntent): void {
 
   // 3. Спавн врагов из очереди.
   stepSpawn(world);
+
+  // Напарник: возрождение по таймеру и ИИ.
+  stepAlly(world);
 
   // 1 и 4. Движение игрока (только если жив) и ИИ врагов.
   if (!world.playerDown) {

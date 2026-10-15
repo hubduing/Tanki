@@ -88,6 +88,37 @@ export function drawTankSprite(
   R(p.shade, 7, 7, 2, 2);
 }
 
+/**
+ * Танк физического размера `size` px (TANK_PX): спрайт 16×16 уменьшается ближайшим соседом.
+ * Уменьшенные варианты кэшируются по направлению и палитре, чтобы не рисовать каждый кадр заново.
+ */
+const scaledCache = new WeakMap<TankPalette, Map<string, HTMLCanvasElement>>();
+export function drawTankSpriteScaled(
+  ctx: CanvasRenderingContext2D,
+  ox: number,
+  oy: number,
+  size: number,
+  dir: Dir,
+  p: TankPalette,
+): void {
+  let byDir = scaledCache.get(p);
+  if (!byDir) {
+    byDir = new Map();
+    scaledCache.set(p, byDir);
+  }
+  let c = byDir.get(`${dir}:${size}`);
+  if (!c) {
+    const full = makeCanvas(16, 16);
+    drawTankSprite(full.getContext('2d')!, 0, 0, dir, p);
+    c = makeCanvas(size, size);
+    const g = c.getContext('2d')!;
+    g.imageSmoothingEnabled = false;
+    g.drawImage(full, 0, 0, size, size);
+    byDir.set(`${dir}:${size}`, c);
+  }
+  ctx.drawImage(c, ox, oy);
+}
+
 /** Пиксельный спрайт 16×16 из строк: символ → цвет. Пустой символ ('.') пропускается. */
 function paintPixels(ctx: CanvasRenderingContext2D, rows: string[], palette: Record<string, string>, ox: number, oy: number, scale: number): void {
   rows.forEach((row, y) => {

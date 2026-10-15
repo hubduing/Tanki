@@ -1,5 +1,6 @@
 import { BULLET_PX } from '../config/balance';
 import { FIELD_ORIGIN, FP, TANK_PX, TILE_PX } from '../config/geometry';
+import { onAllyHit } from './ally';
 import { rollBonusCode, spawnBonus } from './bonus';
 import { LEVEL_SIZE } from '../config/tiles';
 import { DIR_VEC, type Dir } from '../core/dir';
@@ -180,6 +181,16 @@ function resolveBullet(world: World, b: Bullet): void {
       // Неуязвимый игрок (после возрождения) пулю поглощает без урона.
       if (world.player.invuln === 0) {
         world.onPlayerHit(p.x + TANK_PX / 2, p.y + TANK_PX / 2);
+      }
+      return;
+    }
+    // Напарник принимает пули врагов: гибнет и уходит на таймер возрождения.
+    if (world.ally) {
+      const a = tankPx(world.ally);
+      if (rectsOverlap(b.x, b.y, SIZE, SIZE, a.x, a.y, TANK_PX, TANK_PX)) {
+        b.alive = false;
+        world.emit({ type: 'playerHit', x: a.x + TANK_PX / 2, y: a.y + TANK_PX / 2 });
+        onAllyHit(world);
       }
     }
   }
